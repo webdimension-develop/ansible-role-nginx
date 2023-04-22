@@ -1,0 +1,112 @@
+---
+- name: Install Nginx
+  become: true
+  dnf:
+    name: nginx
+    state: present
+#    update_cache: yes
+#    cache_valid_time: 3600
+
+- name: Systemctl enable nginx
+  become: true
+  service:
+    name: nginx
+    enabled: true
+    state: started
+
+- name: Document root permission
+  become: true
+  file:
+    path: /usr/share/nginx/html
+    state: directory
+    owner: nginx
+    group: nginx
+    recurse: true
+    mode: "0775"
+
+- name: User-control
+  become: true
+  user:
+    name: "{{ item.value.name }}"
+    groups: "{{ item.value.groups }}"
+    group: "{{ item.value.group }}"
+    state: "{{ item.value.state }}"
+    remove: "{{ item.value.remove }}"
+    create_home: "{{ item.value.create_home }}"
+    password: "{{ item.value.password }}"
+    shell: "{{ item.value.login_shell }}"
+    comment: "{{ item.value.comment }}"
+    expires: "{{ item.value.expires }}"
+  # changed_when: False
+  with_dict: "{{ nginx_users }}"
+  when: nginx_users is defined
+
+- name: Set public-key
+  become: true
+  ansible.posix.authorized_key:
+    user: "{{ item.value.name }}"
+    state: "{{ item.value.state }}"
+    key: "{{ lookup('file', '{{ item.value.public_key }}') }}"
+  with_dict: "{{ nginx_users }}"
+  when: nginx_users is defined
+
+- name: Set secret-key
+  become: true
+  copy:
+    content: "{{ lookup('file', '{{ item.value.secret_key }}') }}"
+    dest: "/home/{{ item.value.name }}/.ssh/id_rsa"
+    owner: "{{ item.value.name }}"
+    group: "{{ item.value.group }}"
+    mode: '600'
+  with_dict: "{{ nginx_users }}"
+  when:
+    - nginx_users is defined
+    - item.value.secret_key is defined
+    - item.value.create_home == 'yes'
+
+- name: Add sudo authorize
+  become: true
+  lineinfile:
+    dest: /etc/sudoers
+    backup: true
+    line: "{{ item.value.name }} ALL=(ALL) NOPASSWD: ALL"
+  when:
+    - nginx_users is defined
+    - item.value.sudo == 'present'
+  with_dict: "{{ nginx_users }}"
+
+#  when: firewalld_service is defined
+
+
+#  template:
+#    src: nginx.conf.j2
+#    dest: /etc/nginx/sites-available/default
+#
+# - name: nginx本体の設定ファイルを変更
+#  template:
+#    src: nginx.conf.j2
+#    dest: /etc/nginx/nginx.conf
+#  notify:
+#    - restart nginx
+
+- name: Open service by firewalld
+  become: true
+  ansible.posix.firewalld:
+    zone: "{{ item.zone }}"
+    service: "{{ item.service }}"
+    permanent: "{{ item.permanent }}"
+    state: "{{ item.state }}"
+    immediate: "{{ item.immediate }}"
+  with_items: "{{ firewalld_service }}"
+  when: firewalld_service is defined
+  notify: Restart firewalld
+
+- name: Open port by firewalld
+  become: true
+  ansible.posix.firewalld:
+    port: "{{ item.port }}"
+    permanent: "{{ item.permanent }}"
+    state: "{{ item.state }}"
+  with_items: "{{ firewalld_ports }}"
+  when: firewalld_ports is defined
+  notify: Restart firewalld

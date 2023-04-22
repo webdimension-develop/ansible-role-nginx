@@ -1,0 +1,13 @@
+---
+# handlers file for src/roles/nginx
+- name: Restart nginx
+  service:
+    name: nginx
+    state: restarted
+
+- name: Restart firewalld
+  become: true
+  systemd:
+    state: restarted
+    name: firewalld
+    enabled: true
