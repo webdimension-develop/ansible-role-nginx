@@ -1,13 +1,11 @@
 ---
 # defaults file for src/roles/nginx
-http_port: 80
-
-firewalld_ports:
+nginx_firewalld_ports:
   - port: "{{ http_port }}/tcp"
     permanent: "yes"
     state: "enabled"
 
-# firewalld_service:
+# nginx_firewalld_service:
 #  - service: 'nginx'
 #    zone: 'public'
 #    permanent: 'yes'
