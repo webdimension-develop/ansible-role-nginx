@@ -75,19 +75,13 @@
     - item.value.sudo == 'present'
   with_dict: "{{ nginx_users }}"
 
-#  when: firewalld_service is defined
-
-
-#  template:
-#    src: nginx.conf.j2
-#    dest: /etc/nginx/sites-available/default
-#
-# - name: nginx本体の設定ファイルを変更
-#  template:
-#    src: nginx.conf.j2
-#    dest: /etc/nginx/nginx.conf
-#  notify:
-#    - restart nginx
+- name: nginx.conf
+  become: true
+  template:
+    src: default.conf.j2
+    dest: /etc/nginx/conf.d/default.conf
+  notify:
+    - Restart nginx
 
 - name: Open service by firewalld
   become: true

@@ -1,6 +1,7 @@
 ---
 # defaults file for src/roles/nginx
 nginx_http_port: 80
+
 nginx_firewalld_ports:
   - port: "{{ nginx_http_port }}/tcp"
     permanent: "yes"
@@ -13,33 +14,32 @@ nginx_firewalld_ports:
 #    state: 'enabled'
 #    immediate: true
 
-
 nginx_users:
-  web_worker_001:
-    name: 'web_worker_001'
+  web-worker-001:
+    name: 'web-worker-001'
     groups: 'nginx'
     group: 'nginx'
     append: 'yes'
     state: 'present'
     remove: 'no'
-    password: "{{ secret.nginx_users.web_worker_001.password }}"
-    public_key: "files/keys/ansible_rsa.pub"
+    password: "{{ secret.general_users.master_user.password }}"
+    public_key: "/root/.ssh/ansible_rsa.pub"
     login_shell: '/bin/bash'
     create_home: 'yes'
     sudo: 'absent'
-    comment: 'general user'
+    comment: 'master user'
     expires: '-1'
-  web_worker_002:
-    name: 'web_worker_002'
+  web-worker-002:
+    name: 'web-worker-002'
     groups: 'nginx'
     group: 'nginx'
-    append: 'yes'
+    append: 'no'
     state: 'present'
-    remove: 'no'
-    password: "{{ secret.nginx_users.web_worker_002.password }}"
-    public_key: "files/keys/ansible_rsa.pub"
+    remove: 'yes'
+    password: "{{ secret.general_users.master_user.password }}"
+    public_key: "/root/.ssh/ansible_rsa.pub"
     login_shell: '/bin/bash'
     create_home: 'yes'
     sudo: 'absent'
-    comment: 'general user'
+    comment: 'web002'
     expires: '-1'
