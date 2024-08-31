@@ -13,10 +13,11 @@ nginx_firewalld_ports:
 #    permanent: 'yes'
 #    state: 'enabled'
 #    immediate: true
+nginx_master_user_name: 'web-worker-001'
 
 nginx_users:
   web-worker-001:
-    name: 'web-worker-001'
+    name: "{{ nginx_master_user_name }}"
     groups: 'nginx'
     group: 'nginx'
     append: 'yes'
@@ -24,6 +25,7 @@ nginx_users:
     remove: 'no'
     password: "{{ secret.general_users.master_user.password }}"
     public_key: "/root/.ssh/ansible_rsa.pub"
+    secret_key: "/root/.ssh/id_rsa"
     login_shell: '/bin/bash'
     create_home: 'yes'
     sudo: 'absent'
@@ -38,8 +40,15 @@ nginx_users:
     remove: 'yes'
     password: "{{ secret.general_users.master_user.password }}"
     public_key: "/root/.ssh/ansible_rsa.pub"
+    secret_key: "/root/.ssh/id_rsa"
     login_shell: '/bin/bash'
     create_home: 'yes'
     sudo: 'absent'
     comment: 'web002'
     expires: '-1'
+
+nginx_git_clone: true
+nginx_git_clone_repository_url: "{{ secret.nginx_git_clone.git_repository_url }}"
+nginx_git_clone_dest: "/usr/share/nginx/html/"
+nginx_document_root: "{{ nginx_git_clone_dest }}/public"
+nginx_fqdn: "{{ secret.nginx_fqdn }}"

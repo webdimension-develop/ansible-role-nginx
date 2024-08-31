@@ -1,14 +1,14 @@
 server {
     listen       80;
     listen  [::]:80;
-    server_name  example.com;
+    server_name   {{ fqdn }};
     # server_name  _;
 
     access_log  /var/log/nginx/access.log;
     error_log  /var/log/nginx/error.log;
 
     location / {
-        root   /usr/share/nginx/html;
+        root   {{ document_root }};
         index  index.php index.html index.htm;
         # try_files $uri /index.php?$query_string;
     }
@@ -29,7 +29,7 @@ server {
     #
 
     location  ~ \.php$ {
-                  root /usr/share/nginx/html;
+                  root {{ document_root }};
                   fastcgi_pass unix:/var/run/php-fpm/www.sock;
                   fastcgi_index index.php;
                   include fastcgi_params;
