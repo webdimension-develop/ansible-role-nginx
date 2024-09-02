@@ -1,0 +1,20 @@
+server {
+  listen 80;
+  server_name {{ nginx_fqdn }};
+  root {{ nginx_document_root }};
+  index index.html index.php;
+  # return 301 https://$host$request_uri;
+
+  location / {
+       root {{ nginx_document_root }};
+       index  index.html index.htm index.php;
+ }
+
+  location ~* \.php(/|$) {
+     root {{ nginx_document_root }};
+     try_files      $uri =404;
+     fastcgi_pass   unix:/run/php-fpm/www.sock;
+     fastcgi_param  SCRIPT_FILENAME $document_root$fastcgi_script_name;
+     include        fastcgi_params;
+    }
+}

@@ -78,11 +78,8 @@
 - name: nginx.conf
   become: true
   template:
-    src: vhosts.conf.j2
-    dest: /etc/nginx/conf.d/vhosts.conf
-  vars:
-    document_root: "{{ nginx_document_root }}"
-    fqdn: "{{ nginx_fqdn }}"
+    src: templates/nginx_http.conf.j2
+    dest: "/etc/nginx/conf.d/{{ nginx_fqdn }}.conf"
   notify:
     - Restart nginx
 
@@ -135,3 +132,147 @@
   when:
    - chk_cloned.stat.exists is false
    - nginx_git_clone is true
+
+#########################################
+# let's encrypt
+#########################################
+
+- name: Install openssl
+  become: true
+  dnf:
+    name:
+      - mod_ssl
+      - redhat-rpm-config
+      - gcc
+      - libffi-devel
+      - python3-devel
+      - openssl-devel
+      - cargo
+      - pkg-config
+    state: present
+  when:
+    - nginx_ssl is true
+
+- name: Install bottle python package
+  become: true
+  ansible.builtin.pip:
+    name: cryptography
+  when:
+    - nginx_ssl is true
+
+- name: Create directory
+  become: true
+  file:
+    state: directory
+    path: "/etc/pki/tls/certs/{{ nginx_fqdn }}"
+    mode: "0773"
+  when:
+    - nginx_ssl is true
+
+- name: Create account private key
+  become: true
+  community.crypto.openssl_privatekey:
+    path: "/etc/pki/tls/certs/{{ nginx_fqdn }}/account.key"
+  when:
+    - nginx_ssl is true
+
+- name: Create server key
+  become: true
+  community.crypto.openssl_privatekey:
+    path: "/etc/pki/tls/certs/{{ nginx_fqdn }}/{{ nginx_fqdn }}.key"
+  when:
+    - nginx_ssl is true
+
+- name: Create csr
+  become: true
+  community.crypto.openssl_csr:
+    path: "/etc/pki/tls/certs/{{ nginx_fqdn }}/{{ nginx_fqdn }}.csr"
+    privatekey_path: "/etc/pki/tls/certs/{{ nginx_fqdn }}/{{ nginx_fqdn }}.key"
+    common_name: "{{ nginx_fqdn }}"
+  when:
+    - nginx_ssl is true
+
+- name: Create a challenge for fqdn using a account key file.
+  become: true
+  community.crypto.acme_certificate:
+    account_key_src: "/etc/pki/tls/certs/{{ nginx_fqdn }}/account.key"
+    account_email: "{{ nginx_ssl_email }}"
+    csr: "/etc/pki/tls/certs/{{ nginx_fqdn }}/{{ nginx_fqdn }}.csr"
+    dest: "/etc/pki/tls/certs/{{ nginx_fqdn }}/{{ nginx_fqdn }}.crt"
+    # acme_directory: https://acme-v01.api.letsencrypt.org/directory    ### 403 error
+    acme_directory: https://acme-v02.api.letsencrypt.org/directory
+    acme_version: 2
+    terms_agreed: true
+    # Renew if the certificate is at least 30 days old
+    remaining_days: 60
+  register: acme_challenge
+  when:
+    - nginx_ssl is true
+
+- name: Dump acme_challenge
+  become: true
+  debug:
+    msg: "{{ acme_challenge }}"
+  when:
+    - nginx_ssl is true
+
+- name: Create challenge path
+  become: true
+  file:
+    state: directory
+    path: "{{ nginx_document_root }}/{{ acme_challenge['challenge_data'][nginx_fqdn]['http-01']['resource'] | dirname }}"
+    mode: "0775"
+  when:
+    - acme_challenge is changed
+    - nginx_ssl is true
+
+- name: Create challenge data to server
+  become: true
+  copy:
+    dest: "{{ nginx_document_root }}/{{ acme_challenge['challenge_data'][nginx_fqdn]['http-01']['resource'] }}"
+    content: "{{ acme_challenge['challenge_data'][nginx_fqdn]['http-01']['resource_value'] }}"
+    mode: "0775"
+  when:
+    - acme_challenge is changed and nginx_fqdn in acme_challenge['challenge_data']
+    - nginx_ssl is true
+
+- name: Let the challenge be validated and retrieve the cert and intermediate certificate
+  become: true
+  community.crypto.acme_certificate:
+    acme_directory: https://acme-v02.api.letsencrypt.org/directory
+    acme_version: 2
+    terms_agreed: true
+    account_key_src: "/etc/pki/tls/certs/{{ nginx_fqdn }}/account.key"
+    csr: "/etc/pki/tls/certs/{{ nginx_fqdn }}/{{ nginx_fqdn }}.csr"
+    dest: "/etc/pki/tls/certs/{{ nginx_fqdn }}/{{ nginx_fqdn }}.crt"
+    data: "{{ acme_challenge }}"
+  when:
+    - acme_challenge is changed
+    - nginx_ssl is true
+  notify: Restart firewalld
+
+- name: Permit traffic in default zone for https/http
+  become: true
+  ansible.posix.firewalld:
+    service: "{{ item }}"
+    permanent: true
+    immediate: true
+    state: enabled
+  with_items:
+    - https
+    - http
+  when:
+    - nginx_ssl is true
+  notify: Restart firewalld
+
+- name: Replace nginx conf configure
+  become: true
+  ansible.builtin.template:
+    src: templates/nginx_https.conf.j2
+    dest: "/etc/nginx/conf.d/{{ nginx_fqdn }}_ssl.conf"
+    owner: "root"
+    group: "root"
+    mode: '0644'
+  notify: Restart nginx
+  when:
+    - nginx_ssl is true

@@ -49,6 +49,9 @@ nginx_users:
 
 nginx_git_clone: true
 nginx_git_clone_repository_url: "{{ secret.nginx_git_clone.git_repository_url }}"
-nginx_git_clone_dest: "/usr/share/nginx/html/"
+nginx_git_clone_dest: "/usr/share/nginx/html"
 nginx_document_root: "{{ nginx_git_clone_dest }}/public"
 nginx_fqdn: "{{ secret.nginx_fqdn }}"
+
+nginx_ssl: true
+nginx_ssl_email: "{{ secret.letsencrypt.email }}"
