@@ -5,6 +5,11 @@ server {
   index index.html index.php;
   # return 301 https://$host$request_uri;
 
+  location ^~ /.well-known/acme-challenge/ {
+        allow all;
+        root {{ nginx_document_root }};
+  }
+
   location / {
        root {{ nginx_document_root }};
        index  index.html index.htm index.php;

@@ -9,6 +9,11 @@ server {
   index index.html index.php;
   charset utf-8;
 
+  location ^~ /.well-known/acme-challenge/ {
+        default_type "text/plain";
+        root         {{ nginx_document_root }};
+        allow all;
+  }
   location / {
      #try_files $uri $uri/ /index.php?$query_string;
      try_files $uri $uri/ /index.php$is_args$args;

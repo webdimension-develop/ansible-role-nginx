@@ -1,6 +1,7 @@
 ---
 # handlers file for src/roles/nginx
 - name: Restart nginx
+  become: true
   service:
     name: nginx
     state: restarted
