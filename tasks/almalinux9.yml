@@ -276,3 +276,17 @@
   notify: Restart nginx
   when:
     - nginx_ssl is true
+
+- name: cron update certs
+  become: true
+  cron:
+    name: "let's encrypt"
+    minute: "00"
+    hour: "6"
+    day:  "*"
+    month: "*"
+    weekday: "*"
+    job: "/usr/bin/certbot renew --post-hook '/usr/bin/systemctl restart /usr/sbin/nginx'"
+    disabled: "no"
+  when:
+    - nginx_ssl is true
