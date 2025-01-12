@@ -6,6 +6,9 @@
     state: present
 #    update_cache: yes
 #    cache_valid_time: 3600
+  async: 1000
+  poll: 1
+  register: dnf_sleeper
 
 - name: Systemctl enable nginx
   become: true
@@ -13,6 +16,9 @@
     name: nginx
     enabled: true
     state: started
+  async: 1000
+  poll: 1
+  register: dnf_sleeper
 
 - name: Document root permission
   become: true
@@ -120,6 +126,9 @@
   dnf:
     name: 'git'
     state: present
+  async: 1000
+  poll: 1
+  register: dnf_sleeper
 
 - name: git clone
   become: true
@@ -132,6 +141,9 @@
   when:
    - chk_cloned.stat.exists is false
    - nginx_git_clone is true
+  async: 1000
+  poll: 1
+  register: dnf_sleeper
 
 #########################################
 # let's encrypt
@@ -167,6 +179,9 @@
     state: present
   when:
     - nginx_ssl is true
+  async: 1000
+  poll: 1
+  register: dnf_sleeper
 
 - name: Install bottle python package
   become: true
@@ -174,6 +189,9 @@
     name: cryptography
   when:
     - nginx_ssl is true
+  async: 1000
+  poll: 1
+  register: dnf_sleeper
 
 - name: Create directory
   become: true
@@ -190,6 +208,9 @@
     path: "/etc/pki/tls/certs/{{ nginx_fqdn }}/account.key"
   when:
     - nginx_ssl is true
+  async: 1000
+  poll: 1
+  register: dnf_sleeper
 
 - name: Create server key
   become: true
@@ -197,6 +218,9 @@
     path: "/etc/pki/tls/certs/{{ nginx_fqdn }}/{{ nginx_fqdn }}.key"
   when:
     - nginx_ssl is true
+  async: 1000
+  poll: 1
+  register: dnf_sleeper
 
 - name: Create csr
   become: true
@@ -206,6 +230,9 @@
     common_name: "{{ nginx_fqdn }}"
   when:
     - nginx_ssl is true
+  async: 1000
+  poll: 1
+  register: dnf_sleeper
 
 - name: Create a challenge for fqdn using a account key file.
   become: true
@@ -223,6 +250,8 @@
   register: acme_challenge
   when:
     - nginx_ssl is true
+  async: 1000
+  poll: 1
 
 - name: Dump acme_challenge
   become: true
@@ -250,6 +279,8 @@
   when:
     - acme_challenge is changed and nginx_fqdn in acme_challenge['challenge_data']
     - nginx_ssl is true
+  async: 1000
+  poll: 1
 
 - name: Let the challenge be validated and retrieve the cert and intermediate certificate
   become: true
