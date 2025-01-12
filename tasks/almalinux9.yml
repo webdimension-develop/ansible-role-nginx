@@ -279,8 +279,6 @@
   when:
     - acme_challenge is changed and nginx_fqdn in acme_challenge['challenge_data']
     - nginx_ssl is true
-  async: 1000
-  poll: 1
 
 - name: Let the challenge be validated and retrieve the cert and intermediate certificate
   become: true
@@ -296,6 +294,8 @@
     - acme_challenge is changed
     - nginx_ssl is true
   notify: Restart firewalld
+  async: 1000
+  poll: 1
 
 - name: Permit traffic in default zone for https/http
   become: true
